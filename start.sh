@@ -79,7 +79,7 @@ function download_book_first_page()
     sed -i -e '/^$/d' book_first_page.html
 }
 
-function download_book_page()
+function download_book_list_page()
 {
     type=$1
     page_num=$2
@@ -109,6 +109,11 @@ function extract_book_details()
     sed -i -n ''"${line_end}"',$p' book_list.html
 }
 
+function download_book_page()
+{
+    wget -q --load-cookies=${cookies_file} $1 -O book_page.html
+}
+
 function extract_book_info()
 {
     book_stat_type=$1
@@ -129,9 +134,15 @@ function extract_book_info()
         pub_date=
         charge=
         book_addr=
+        douban_score=
+        douban_votes_count=
+
+        book_addr=$(grep "title=" ${book_detail_file} | awk -F "\"" {'print $2'})
+        download_book_page ${book_addr}
+        douban_score=$(grep "<strong class=\"ll rating_num \" property=\"v:average\">" book_page.html | awk -F">" {'print $2'} | awk -F"<" {'print $1'})
+        douban_votes_count=$(grep "<span property=\"v:votes\">" book_page.html | awk -F">" {'print $3'} | awk -F"<" {'print $1'})
 
         book_title=$(grep "title=" ${book_detail_file} | awk -F "\"" {'print $4'})
-        book_addr=$(grep "title=" ${book_detail_file} | awk -F "\"" {'print $2'})
 
         # extract book description, include publisher/author/version
         line_begin=$(grep -n "<div class=\"pub\">" ${book_detail_file} | head -n 1 | awk -F ":" {'print $1'})
@@ -164,11 +175,11 @@ function extract_book_info()
         book_tags=$(grep "<span class=\"tags\">" ${book_detail_file} | awk -F":" {'print $2'} | awk -F"<" {'print $1'})
 
         if [[ ${book_stat_type} == "wish" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",想读,"${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",想读,"${douban_score}","${douban_votes_count}","${book_addr}
         elif [[ ${book_stat_type} == "do" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",在读,"${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",在读,"${douban_score}","${douban_votes_count}","${book_addr}
         elif [[ ${book_stat_type} == "collect" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",已读,"${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",已读,"${douban_score}","${douban_votes_count}","${book_addr}
         fi
         echo ${book_line} >> book-list
 
@@ -202,7 +213,7 @@ function load_books()
     for ((num=0; num<${book_page_count}; num++))
     do
         echo "[$(date)] downloading ${type_name} book page $num"
-        download_book_page ${type_name} $num
+        download_book_list_page ${type_name} $num
         extract_book_list_context "book_first_page.html"
         extract_book_info ${type_name}
 
@@ -214,9 +225,9 @@ function load_books()
 
 function load_my_all_books()
 {
-    echo "书名,作者,翻译,出版社,初版日期,价格,标签,阅读状态,豆瓣地址" > book-list
+    echo "书名,作者,翻译,出版社,初版日期,价格,标签,阅读状态,豆瓣评分,豆瓣评论人数,豆瓣地址" > book-list
 
-    book_types=("collect" "do" "wish")
+    book_types=("do" "collect" "wish")
     for type_name in ${book_types[*]}
     do
         load_books ${type_name}
