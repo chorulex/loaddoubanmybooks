@@ -136,11 +136,15 @@ function extract_book_info()
         book_addr=
         douban_score=
         douban_votes_count=
+        book_group=
+        book_page=
 
         book_addr=$(grep "title=" ${book_detail_file} | awk -F "\"" {'print $2'})
         download_book_page ${book_addr}
         douban_score=$(grep "<strong class=\"ll rating_num \" property=\"v:average\">" book_page.html | awk -F">" {'print $2'} | awk -F"<" {'print $1'})
         douban_votes_count=$(grep "<span property=\"v:votes\">" book_page.html | awk -F">" {'print $3'} | awk -F"<" {'print $1'})
+        book_group=$(grep "丛书" book_page.html | awk -F">" {'print $4'} | awk -F"<" {'print $1'})
+        book_page=$(grep "页数" book_page.html | awk -F">" {'print $3'} | awk -F"<" {'print $1'})
 
         book_title=$(grep "title=" ${book_detail_file} | awk -F "\"" {'print $4'})
 
@@ -175,11 +179,11 @@ function extract_book_info()
         book_tags=$(grep "<span class=\"tags\">" ${book_detail_file} | awk -F":" {'print $2'} | awk -F"<" {'print $1'})
 
         if [[ ${book_stat_type} == "wish" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",想读,"${douban_score}","${douban_votes_count}","${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${book_group}","${pub_date}","${book_page}","${charge}","${book_tags}",想读,"${douban_score}","${douban_votes_count}","${book_addr}
         elif [[ ${book_stat_type} == "do" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",在读,"${douban_score}","${douban_votes_count}","${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${book_group}","${pub_date}","${book_page}","${charge}","${book_tags}",在读,"${douban_score}","${douban_votes_count}","${book_addr}
         elif [[ ${book_stat_type} == "collect" ]] ; then
-            book_line=${book_title}","${author}","${translator}","${publisher}","${pub_date}","${charge}","${book_tags}",已读,"${douban_score}","${douban_votes_count}","${book_addr}
+            book_line=${book_title}","${author}","${translator}","${publisher}","${book_group}","${pub_date}","${book_page}","${charge}","${book_tags}",已读,"${douban_score}","${douban_votes_count}","${book_addr}
         fi
         echo ${book_line} >> book-list
 
@@ -225,7 +229,7 @@ function load_books()
 
 function load_my_all_books()
 {
-    echo "书名,作者,翻译,出版社,初版日期,价格,标签,阅读状态,豆瓣评分,豆瓣评论人数,豆瓣地址" > book-list
+    echo "书名,作者,翻译,出版社,丛书,出版日期,页数,定价,标签,阅读状态,豆瓣评分,豆瓣评论人数,豆瓣地址" > book-list
 
     book_types=("do" "collect" "wish")
     for type_name in ${book_types[*]}
